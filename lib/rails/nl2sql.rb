@@ -2,6 +2,7 @@ require "rails/nl2sql/version"
 require "rails/nl2sql/query_generator"
 require "rails/nl2sql/schema_builder"
 require "rails/nl2sql/query_validator"
+require "rails/nl2sql/active_record_extension"
 require "rails/nl2sql/railtie" if defined?(Rails)
 
 module Rails
