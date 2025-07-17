@@ -50,5 +50,11 @@ RSpec.describe Rails::Nl2sql::QueryValidator do
       allow(connection).to receive(:execute).and_raise(ActiveRecord::StatementInvalid.new("Syntax error"))
       expect { described_class.validate("SELECT FROM users") }.to raise_error("Invalid SQL query: Syntax error")
     end
+
+    it 'raises an error when multiple statements are provided' do
+      allow(connection).to receive(:execute).with("EXPLAIN SELECT * FROM users").and_return(true)
+      multi_query = "SELECT * FROM users; SELECT * FROM products"
+      expect { described_class.validate(multi_query) }.to raise_error("Query contains multiple statements.")
+    end
   end
 end

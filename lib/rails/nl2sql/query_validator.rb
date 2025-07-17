@@ -15,9 +15,16 @@ module Rails
         # Basic validation: prevent destructive commands
         disallowed_keywords = %w(DROP DELETE UPDATE INSERT TRUNCATE ALTER CREATE EXEC EXECUTE MERGE REPLACE)
         query_upper = query.upcase
-        
+
         if disallowed_keywords.any? { |keyword| query_upper.include?(keyword) }
           raise Rails::Nl2sql::Error, "Query contains disallowed keywords."
+        end
+
+        # Ensure there is only a single statement
+        cleaned_query = query.rstrip
+        cleaned_query = cleaned_query.chomp(';')
+        if cleaned_query.include?(';')
+          raise Rails::Nl2sql::Error, "Query contains multiple statements."
         end
 
         # Ensure it's a SELECT query
