@@ -1,0 +1,14 @@
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
+/vendor/
+/spec/dummy/
+/*.gem
+/.rspec
+/spec/rails_helper.rb
+/spec/spec_helper.rb
