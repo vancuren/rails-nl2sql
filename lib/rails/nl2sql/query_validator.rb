@@ -2,17 +2,36 @@ module Rails
   module Nl2sql
     class QueryValidator
       def self.validate(query)
+        return false unless query && !query.strip.empty?
+        
+        # Clean the query first
+        query = query.strip
+        
+        # Check if query is malformed (contains markdown or other formatting)
+        if query.include?('```') || query.include?('```sql')
+          raise Rails::Nl2sql::Error, "Query contains markdown formatting and could not be cleaned properly"
+        end
+        
         # Basic validation: prevent destructive commands
-        disallowed_keywords = %w(DROP DELETE UPDATE INSERT TRUNCATE ALTER CREATE)
-        if disallowed_keywords.any? { |keyword| query.upcase.include?(keyword) }
-          raise "Query contains disallowed keywords."
+        disallowed_keywords = %w(DROP DELETE UPDATE INSERT TRUNCATE ALTER CREATE EXEC EXECUTE MERGE REPLACE)
+        query_upper = query.upcase
+        
+        if disallowed_keywords.any? { |keyword| query_upper.include?(keyword) }
+          raise Rails::Nl2sql::Error, "Query contains disallowed keywords."
         end
 
-        # Use Rails' built-in sanitization to be safe
+        # Ensure it's a SELECT query
+        unless query_upper.strip.start_with?('SELECT', 'WITH')
+          raise Rails::Nl2sql::Error, "Only SELECT queries are allowed."
+        end
+
+        # Use Rails' built-in validation with EXPLAIN
         begin
-          ActiveRecord::Base.connection.execute("EXPLAIN #{query}")
+          # Remove trailing semicolon for EXPLAIN
+          explain_query = query.gsub(/;\s*$/, '')
+          ActiveRecord::Base.connection.execute("EXPLAIN #{explain_query}")
         rescue ActiveRecord::StatementInvalid => e
-          raise "Invalid SQL query: #{e.message}"
+          raise Rails::Nl2sql::Error, "Invalid SQL query: #{e.message}"
         end
 
         true
