@@ -22,7 +22,17 @@ Next, you need to run the install generator:
 
     $ rails generate rails:nl2sql:install
 
-This will create an initializer file at `config/initializers/rails_nl2sql.rb` where you can configure your API key.
+This will create an initializer file at `config/initializers/rails_nl2sql.rb`. You will need to configure your OpenAI API key in this file.
+
+```ruby
+# config/initializers/rails_nl2sql.rb
+Rails::Nl2sql.configure do |config|
+  config.api_key = ENV["OPENAI_API_KEY"] # It's recommended to use an environment variable
+  # config.model = "text-davinci-003" # Optional: Specify the AI model to use (default is text-davinci-003)
+end
+```
+
+Make sure to set the `OPENAI_API_KEY` environment variable in your development and production environments.
 
 ## Usage
 
