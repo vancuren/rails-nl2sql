@@ -13,3 +13,4 @@
 /spec/rails_helper.rb
 /spec/spec_helper.rb
 CLAUDE.md
+Gemfile.lock
