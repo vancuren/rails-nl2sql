@@ -78,9 +78,24 @@ module Rails
 
       def build_prompts(input, db_server, retrieved_context)
         template = Rails::Nl2sql.prompt_template
-        template_binding = binding
-        system_prompt = ERB.new(template['system']).result(template_binding)
-        user_prompt = ERB.new(template['user']).result(template_binding)
+        
+        # Create ERB context with explicit local variables
+        erb_context = Object.new
+        erb_context.instance_variable_set(:@input, input)
+        erb_context.instance_variable_set(:@db_server, db_server)
+        erb_context.instance_variable_set(:@retrieved_context, retrieved_context)
+        
+        erb_context.define_singleton_method(:get_binding) do
+          binding
+        end
+        
+        # Define accessor methods for the ERB template
+        erb_context.define_singleton_method(:input) { @input }
+        erb_context.define_singleton_method(:db_server) { @db_server }
+        erb_context.define_singleton_method(:retrieved_context) { @retrieved_context }
+        
+        system_prompt = ERB.new(template['system']).result(erb_context.get_binding)
+        user_prompt = ERB.new(template['user']).result(erb_context.get_binding)
         [system_prompt, user_prompt]
       end
 

@@ -68,7 +68,13 @@ module Rails
       end
 
       def self.build_table_schema(table)
-        columns = ActiveRecord::Base.connection.columns(table)
+        begin
+          columns = ActiveRecord::Base.connection.columns(table)
+        rescue => e
+          # Skip tables that can't be introspected (e.g., PostGIS system tables)
+          Rails.logger.debug "Skipping table #{table} due to introspection error: #{e.message}" if defined?(Rails)
+          return "-- Table #{table} skipped due to introspection error"
+        end
         
         schema = "CREATE TABLE #{table} (\n"
         
@@ -122,7 +128,22 @@ module Rails
         when :json
           "JSON"
         else
-          column.sql_type || "TEXT"
+          # Handle PostGIS geometry types and other spatial types
+          sql_type = column.sql_type || "TEXT"
+          case sql_type.downcase
+          when /geometry/
+            "GEOMETRY"
+          when /geography/
+            "GEOGRAPHY"
+          when /point/
+            "POINT"
+          when /polygon/
+            "POLYGON"
+          when /linestring/
+            "LINESTRING"
+          else
+            sql_type
+          end
         end
       end
 
@@ -159,7 +180,34 @@ module Rails
           'sys'
         ]
         
-        system_tables.any? { |sys_table| table.include?(sys_table) }
+        # PostGIS system tables
+        postgis_system_tables = [
+          'geometry_columns',
+          'geography_columns',
+          'spatial_ref_sys',
+          'raster_columns',
+          'raster_overviews',
+          'topology',
+          'layer',
+          'topology_layer'
+        ]
+        
+        # PostgreSQL system schemas
+        pg_system_schemas = [
+          'pg_',
+          'information_schema'
+        ]
+        
+        # Check regular system tables
+        return true if system_tables.any? { |sys_table| table.include?(sys_table) }
+        
+        # Check PostGIS system tables
+        return true if postgis_system_tables.any? { |sys_table| table == sys_table }
+        
+        # Check PostgreSQL system schemas
+        return true if pg_system_schemas.any? { |schema| table.start_with?(schema) }
+        
+        false
       end
 
       # Legacy method for backward compatibility
