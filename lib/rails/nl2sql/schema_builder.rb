@@ -1,11 +1,24 @@
 module Rails
   module Nl2sql
     class SchemaBuilder
+      @@schema_cache = nil
+
       def self.build_schema(options = {})
+        if options.empty? && @@schema_cache
+          return @@schema_cache
+        end
+
         tables = get_filtered_tables(options)
-        
+
         schema_text = build_schema_text(tables)
+
+        @@schema_cache = schema_text if options.empty?
+
         schema_text
+      end
+
+      def self.clear_cache!
+        @@schema_cache = nil
       end
 
       def self.get_database_type

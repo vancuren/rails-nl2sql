@@ -42,6 +42,16 @@ To execute a natural language query, you can use the `execute` method:
 results = Rails::Nl2sql::Processor.execute("Show me all the users from California")
 ```
 
+### Using `from_nl` with ActiveRecord
+
+You can call the NL2SQL processor directly on your models. The `from_nl` method
+returns an `ActiveRecord::Relation` so you can chain scopes, pagination and
+other query modifiers as usual.
+
+```ruby
+User.from_nl("all users who signed up last week").limit(10)
+```
+
 You can also specify which tables to include or exclude:
 
 ```ruby
@@ -58,6 +68,18 @@ Rails::Nl2sql::Processor.get_tables
 
 ```ruby
 Rails::Nl2sql::Processor.get_schema(include: ["users", "orders"])
+```
+
+### Schema caching
+
+For efficiency the gem caches the full database schema on first use. The cached
+schema is reused for subsequent requests so your application doesn't need to hit
+the database every time a prompt is generated.
+
+You can clear the cached schema if your database changes:
+
+```ruby
+Rails::Nl2sql::SchemaBuilder.clear_cache!
 ```
 
 ## Development
