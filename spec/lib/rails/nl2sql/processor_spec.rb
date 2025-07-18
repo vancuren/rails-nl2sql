@@ -56,12 +56,10 @@ RSpec.describe Rails::Nl2sql::Processor do
       Rails::Nl2sql.configure do |config|
         config.api_key = api_key
         config.model = model
+        config.provider = double('provider')
       end
 
-      # Mock OpenAI::Client
-      openai_client = double('OpenAI::Client')
-      allow(OpenAI::Client).to receive(:new).with(api_key: api_key).and_return(openai_client)
-      allow(openai_client).to receive(:completions).and_return(double('response', choices: [double('choice', text: generated_sql)]))
+      allow(Rails::Nl2sql.provider).to receive(:complete).and_return({'choices' => [{'text' => generated_sql}]})
 
       # Mock connection.execute for the generated SQL
       allow(connection).to receive(:execute).with(generated_sql).and_return(['user1', 'user2'])

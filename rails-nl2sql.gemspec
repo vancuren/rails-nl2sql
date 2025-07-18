@@ -37,6 +37,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "openai", "~> 0.3"
+  spec.add_dependency "anthropic", ">= 0.1", require: false
   spec.add_development_dependency "bundler", ">= 2.0"
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "rspec-rails", "~> 6.0"
