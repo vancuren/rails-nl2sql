@@ -78,8 +78,9 @@ module Rails
 
       def build_prompts(input, db_server, retrieved_context)
         template = Rails::Nl2sql.prompt_template
-        system_prompt = ERB.new(template['system']).result(binding)
-        user_prompt = ERB.new(template['user']).result(binding)
+        template_binding = binding
+        system_prompt = ERB.new(template['system']).result(template_binding)
+        user_prompt = ERB.new(template['user']).result(template_binding)
         [system_prompt, user_prompt]
       end
 
