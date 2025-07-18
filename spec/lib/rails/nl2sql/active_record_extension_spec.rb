@@ -40,4 +40,10 @@ RSpec.describe Rails::Nl2sql::ActiveRecordExtension do
     relation = User.from_nl('all users')
     expect(relation).to be_a(ActiveRecord::Relation)
   end
+
+  it 'strips a trailing semicolon from the generated query' do
+    allow(Rails::Nl2sql::Processor).to receive(:generate_query_only).with('all users', {}).and_return('SELECT * FROM users;')
+    expect(User).to receive(:from).with(Arel.sql('(SELECT * FROM users) AS users')).and_call_original
+    User.from_nl('all users')
+  end
 end

@@ -9,6 +9,8 @@ module Rails
       class_methods do
         def from_nl(prompt, options = {})
           sql = Rails::Nl2sql::Processor.generate_query_only(prompt, options)
+          sql = sql.to_s.strip
+          sql = sql.chomp(';')
           from(Arel.sql("(#{sql}) AS #{table_name}"))
         end
       end
