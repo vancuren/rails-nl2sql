@@ -28,7 +28,10 @@ This will create an initializer file at `config/initializers/rails_nl2sql.rb`. Y
 # config/initializers/rails_nl2sql.rb
 Rails::Nl2sql.configure do |config|
   config.api_key = ENV["OPENAI_API_KEY"] # It's recommended to use an environment variable
-  # config.model = "text-davinci-003" # Optional: Specify the AI model to use (default is text-davinci-003)
+  # config.model = "gpt-3.5-turbo-instruct" # Optional
+  # config.provider = Rails::Nl2sql::Providers::OpenaiProvider.new(api_key: config.api_key)
+  # config.prompt_template_path = Rails::Nl2sql.prompt_template_path
+  # config.max_schema_lines = 200
 end
 ```
 
@@ -81,6 +84,36 @@ You can clear the cached schema if your database changes:
 ```ruby
 Rails::Nl2sql::SchemaBuilder.clear_cache!
 ```
+
+## Pluggable LLM Providers
+
+Rails NL2SQL ships with a simple adapter system so you can use different large language model providers.
+By default the gem uses OpenAI, but you can plug in others like Anthropic or a local Llama‑based HTTP endpoint.
+
+```ruby
+Rails::Nl2sql.configure do |config|
+  config.provider = Rails::Nl2sql::Providers::AnthropicProvider.new(api_key: ENV['ANTHROPIC_KEY'])
+end
+```
+
+## Prompt Templates
+
+The prompts used to talk to the LLM are defined in a YAML/ERB template. You can override this template
+to enforce your own naming conventions or add company specific instructions.
+
+```yaml
+system: |
+  Custom system prompt text...
+user: |
+  Query: <%= input %>
+```
+
+Set the path via `config.prompt_template_path`.
+
+## Context Window Management
+
+Large schemas can exceed the model context window. Use `config.max_schema_lines` to automatically truncate
+the schema snippet sent to the model. Only the first N lines are included.
 
 ## Development
 
