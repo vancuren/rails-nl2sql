@@ -39,10 +39,9 @@ module Rails
     end
 
     def self.prompt_template
-      @prompt_template ||= begin
-        erb = ERB.new(File.read(prompt_template_path))
-        YAML.safe_load(erb.result)
-      end
+      # Load the YAML template without evaluating ERB so we can
+      # interpolate variables later when building prompts.
+      @prompt_template ||= YAML.safe_load(File.read(prompt_template_path))
     end
 
     class Processor
