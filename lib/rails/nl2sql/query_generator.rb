@@ -1,20 +1,32 @@
 require "erb"
 require "yaml"
+require "rails/nl2sql/prompt_builder"
+
 module Rails
   module Nl2sql
     class QueryGenerator
       DEFAULT_MODEL = 'gpt-3.5-turbo-instruct'
 
+      # Initializes a new QueryGenerator.
+      #
+      # @param provider [Object] The AI provider to use for generating queries.
+      # @param model [String] The name of the AI model to use.
       def initialize(provider: nil, model: DEFAULT_MODEL)
         @provider = provider || Rails::Nl2sql.provider || default_provider(model)
         @model = model
       end
 
+      # Generates a SQL query from a natural language prompt.
+      #
+      # @param prompt [String] The natural language prompt.
+      # @param schema [String] The database schema.
+      # @param db_server [String] The type of database server.
+      # @param tables [Array<String>] The tables to include in the schema.
+      # @return [String] The generated SQL query.
       def generate_query(prompt, schema, db_server = 'PostgreSQL', tables = nil)
         retrieved_context = build_context(schema, tables)
 
-        system_prompt, user_prompt = build_prompts(prompt, db_server, retrieved_context)
-        full_prompt = "#{system_prompt}\n\n#{user_prompt}"
+        full_prompt = PromptBuilder.build(prompt, db_server, retrieved_context)
 
         response = @provider.complete(prompt: full_prompt, max_tokens: 500, temperature: 0.1)
         generated_query = extract_text(response)
@@ -27,10 +39,18 @@ module Rails
 
       private
 
+      # Returns the default AI provider.
+      #
+      # @param model [String] The name of the AI model to use.
+      # @return [Object] The default AI provider.
       def default_provider(model)
         Providers::OpenaiProvider.new(api_key: Rails::Nl2sql.api_key, model: model)
       end
 
+      # Extracts the text from the AI provider's response.
+      #
+      # @param response [Object] The response from the AI provider.
+      # @return [String] The extracted text.
       def extract_text(response)
         if response.is_a?(Hash)
           response.dig('choices', 0, 'text')&.strip
@@ -39,6 +59,11 @@ module Rails
         end
       end
 
+      # Builds the context for the AI prompt.
+      #
+      # @param schema [String] The database schema.
+      # @param tables [Array<String>] The tables to include in the schema.
+      # @return [String] The context for the AI prompt.
       def build_context(schema, tables)
         context = if tables&.any?
           filter_schema_by_tables(schema, tables)
@@ -48,6 +73,10 @@ module Rails
         apply_context_window(context)
       end
 
+      # Applies the context window to the context.
+      #
+      # @param context [String] The context for the AI prompt.
+      # @return [String] The context with the context window applied.
       def apply_context_window(context)
         max_lines = Rails::Nl2sql.max_schema_lines
         return context unless max_lines
@@ -58,6 +87,11 @@ module Rails
         lines.first(max_lines).join("\n")
       end
 
+      # Filters the schema by the given tables.
+      #
+      # @param schema [String] The database schema.
+      # @param tables [Array<String>] The tables to include in the schema.
+      # @return [String] The filtered schema.
       def filter_schema_by_tables(schema, tables)
         lines = schema.split("\n")
         filtered_lines = []
@@ -76,36 +110,17 @@ module Rails
         filtered_lines.join("\n")
       end
 
-      def build_prompts(input, db_server, retrieved_context)
-        template = Rails::Nl2sql.prompt_template
-        
-        # Create ERB context with explicit local variables
-        erb_context = Object.new
-        erb_context.instance_variable_set(:@input, input)
-        erb_context.instance_variable_set(:@db_server, db_server)
-        erb_context.instance_variable_set(:@retrieved_context, retrieved_context)
-        
-        erb_context.define_singleton_method(:get_binding) do
-          binding
-        end
-        
-        # Define accessor methods for the ERB template
-        erb_context.define_singleton_method(:input) { @input }
-        erb_context.define_singleton_method(:db_server) { @db_server }
-        erb_context.define_singleton_method(:retrieved_context) { @retrieved_context }
-        
-        system_prompt = ERB.new(template['system']).result(erb_context.get_binding)
-        user_prompt = ERB.new(template['user']).result(erb_context.get_binding)
-        [system_prompt, user_prompt]
-      end
-
+      # Cleans the SQL response from the AI provider.
+      #
+      # @param query [String] The SQL query to clean.
+      # @return [String] The cleaned SQL query.
       def clean_sql_response(query)
         return query unless query
 
         query = query.gsub(/```sql\n?/, '')
         query = query.gsub(/```\n?/, '')
         query = query.strip
-        query = query.gsub(/^.*?(SELECT|WITH|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)/i, '\1')
+        query = query.gsub(/^(.*?)(SELECT|WITH|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)/i, '\1')
         lines = query.split("\n")
         sql_lines = []
 
@@ -122,6 +137,9 @@ module Rails
         cleaned_query
       end
 
+      # Validates the safety of the SQL query.
+      #
+      # @param query [String] The SQL query to validate.
       def validate_query_safety(query)
         return unless query
 

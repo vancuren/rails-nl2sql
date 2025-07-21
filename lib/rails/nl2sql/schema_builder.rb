@@ -30,7 +30,7 @@ module Rails
           'MySQL'
         when 'sqlite3'
           'SQLite'
-        when 'oracle'
+        when 'oracle', 'oracleenhanced'
           'Oracle'
         when 'sqlserver'
           'SQL Server'

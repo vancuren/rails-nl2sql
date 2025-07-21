@@ -52,13 +52,24 @@ returns an `ActiveRecord::Relation` so you can chain scopes, pagination and
 other query modifiers as usual.
 
 ```ruby
+# Get all users who signed up last week and limit the results to 10.
 User.from_nl("all users who signed up last week").limit(10)
+
+# Get all users from California and order them by their name.
+User.from_nl("all users from california").order(:name)
+
+# Get all users who have an order with a total greater than 100.
+User.from_nl("all users who have an order with a total greater than 100")
 ```
 
 You can also specify which tables to include or exclude:
 
 ```ruby
+# Get all the orders for the user with email 'test@example.com', but only include the `users` and `orders` tables.
 results = Rails::Nl2sql::Processor.execute("Show me all the orders for the user with email 'test@example.com'", include: ["users", "orders"])
+
+# Get all the orders for the user with email 'test@example.com', but exclude the `payments` table.
+results = Rails::Nl2sql::Processor.execute("Show me all the orders for the user with email 'test@example.com'", exclude: ["payments"])
 ```
 
 ### Getting a list of tables
@@ -96,6 +107,26 @@ Rails::Nl2sql.configure do |config|
 end
 ```
 
+### Llama
+
+You can also use a local Llama-based HTTP endpoint. You'll need to have a local Llama server running.
+
+```ruby
+Rails::Nl2sql.configure do |config|
+  config.provider = Rails::Nl2sql::Providers::LlamaProvider.new(endpoint: "http://localhost:8080/completion")
+end
+```
+
+### Google Gemini
+
+You can also use Google's Gemini models. You'll need to have the `google-apis-aiplatform_v1` gem installed and be authenticated with Google Cloud.
+
+```ruby
+Rails::Nl2sql.configure do |config|
+  config.provider = Rails::Nl2sql::Providers::GeminiProvider.new(api_key: ENV['GOOGLE_API_KEY'])
+end
+```
+
 ## Prompt Templates
 
 The prompts used to talk to the LLM are defined in a YAML/ERB template. You can override this template
@@ -115,11 +146,52 @@ Set the path via `config.prompt_template_path`.
 Large schemas can exceed the model context window. Use `config.max_schema_lines` to automatically truncate
 the schema snippet sent to the model. Only the first N lines are included.
 
+## Debug Mode
+
+This gem provides a debug mode for troubleshooting problems. When debug mode is enabled, the gem will log information about the queries that are being generated, the schema that is being used, and more.
+
+To enable debug mode, set the `debug` option to `true` in your initializer file:
+
+```ruby
+# config/initializers/rails_nl2sql.rb
+Rails::Nl2sql.configure do |config|
+  config.debug = true
+end
+```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+
+## Command-Line Interface (CLI)
+
+This gem provides a command-line interface (CLI) for interacting with the NL2SQL processor.
+
+### `query`
+
+Converts a natural language query to SQL.
+
+```bash
+$ rails-nl2sql query "Show me all the users from California"
+```
+
+### `schema`
+
+Displays the database schema.
+
+```bash
+$ rails-nl2sql schema
+```
+
+### `tables`
+
+Displays the database tables.
+
+```bash
+$ rails-nl2sql tables
+```
 
 ## Contributing
 

@@ -3,6 +3,7 @@ require "rails/nl2sql/providers/base"
 require "rails/nl2sql/providers/openai_provider"
 require "rails/nl2sql/providers/anthropic_provider"
 require "rails/nl2sql/providers/llama_provider"
+require "rails/nl2sql/providers/gemini_provider"
 require "rails/nl2sql/query_generator"
 require "rails/nl2sql/schema_builder"
 require "rails/nl2sql/query_validator"
@@ -20,6 +21,7 @@ module Rails
       attr_accessor :model
       attr_accessor :provider
       attr_accessor :max_schema_lines
+      attr_accessor :debug
 
       def prompt_template_path=(path)
         @prompt_template = nil
@@ -33,6 +35,7 @@ module Rails
 
     @model = 'gpt-3.5-turbo-instruct'
     @max_schema_lines = 200
+    @debug = false
 
     def self.configure
       yield self
@@ -46,19 +49,7 @@ module Rails
 
     class Processor
       def self.execute(natural_language_query, options = {})
-        db_server = SchemaBuilder.get_database_type
-        schema = SchemaBuilder.build_schema(options)
-        tables = options[:tables]
-
-        query_generator = QueryGenerator.new(model: Rails::Nl2sql.model)
-        generated_query = query_generator.generate_query(
-          natural_language_query,
-          schema,
-          db_server,
-          tables
-        )
-
-        QueryValidator.validate(generated_query)
+        generated_query = self.generate_query_only(natural_language_query, options)
         ActiveRecord::Base.connection.execute(generated_query)
       end
 
@@ -67,6 +58,13 @@ module Rails
         schema = SchemaBuilder.build_schema(options)
         tables = options[:tables]
 
+        if Rails::Nl2sql.debug && defined?(Rails)
+          Rails.logger.debug "--- Rails NL2SQL Debug Info ---"
+          Rails.logger.debug "Natural Language Query: #{natural_language_query}"
+          Rails.logger.debug "Schema: \n#{schema}"
+          Rails.logger.debug "Tables: #{tables.inspect}" if tables
+        end
+
         query_generator = QueryGenerator.new(model: Rails::Nl2sql.model)
         generated_query = query_generator.generate_query(
           natural_language_query,
@@ -74,6 +72,11 @@ module Rails
           db_server,
           tables
         )
+
+        if Rails::Nl2sql.debug && defined?(Rails)
+          Rails.logger.debug "Generated Query: #{generated_query}"
+          Rails.logger.debug "--- End Rails NL2SQL Debug Info ---"
+        end
 
         QueryValidator.validate(generated_query)
         generated_query
