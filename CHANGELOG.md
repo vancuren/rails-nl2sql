@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8] - 2025-07-21
+- Adding support for Google's Gemini LLM provider.
+- Adding a command-line interface (CLI).
+- Improving the documentation.
+- Adding a debug mode.
+- Adding support for the Oracle database adapter.
+- Refactoring the code to make it more modular and easier to understand.
+- Adding more comments to the code.
+ 
 ## [0.2.7] - 2025-07-18
 ### Fixed
 - Fix from_nl trailing semicolon
